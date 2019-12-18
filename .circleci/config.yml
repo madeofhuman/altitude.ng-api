@@ -1,0 +1,73 @@
+# PHP CircleCI 2.0 configuration file
+#
+# Check https://circleci.com/docs/2.0/language-php/ for more details
+#
+version: 2
+jobs:
+  build:
+    docker:
+      - image: circleci/php:7.4.0-apache
+        environment:
+          APP_NAME: Altitude
+          APP_ENV: local
+          APP_KEY: base64:dGhqbnpja2hibjdzaGRieTNicjdnYmR2cw==
+          APP_DEBUG: false
+          APP_TIMEZONE: UTC
+          DB_CONNECTION: postgresql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: altitude-test
+          DB_USERNAME: root
+          DB_PASSWORD: password
+          CACHE_DRIVER: file
+          QUEUE_DRIVER: database
+
+      - image: circleci/postgres:12.1-postgis-ram
+          environment:
+            POSTGRES_USER: root
+            POSTGRES_DB: altitude-test
+            POSTGRES_PASSWORD: password
+
+    steps:
+      - run:
+          name: Install System Packages
+          command: sudo apt update & sudo apt install -y git unzip zlib1g-dev
+
+      - checkout
+
+      - run:
+          name: Install PHP Extensions
+          command: sudo docker-php-ext-install zip pdo pdo_pgsql
+
+      - run:
+          name: Install Composer
+          command: |
+            php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
+            php -r "copy('https://composer.github.io/installer.sig', 'composer-setup.sig');"
+            php -r "if (hash_file('SHA384', 'composer-setup.php') === trim(file_get_contents('composer-setup.sig'))) { echo 'Installer verified'; } else { echo 'Installer corrupt'; unlink('composer-setup.php'); } echo PHP_EOL;"
+            php composer-setup.php
+            php -r "unlink('composer-setup.php');"
+
+      - restore_cache:
+          keys:
+            - v1-dependencies-{{ checksum "composer.json" }}
+            # fallback to using the latest cache if no exact match is found
+            - v1-dependencies-
+
+      - run:
+          name: Install Project Dependencies
+          comand: composer install -n --prefer-dist
+
+      - save_cache:
+          key: v1-dependencies-{{ checksum "composer.json" }}
+          paths:
+            - ./vendor
+
+      - run:
+          name: Initialise Database
+          comand: |
+            php artisan migrate:refresh --env=testing --force
+            php artisan db:seed
+      - run:
+          name: Run Tests
+          command: ./vendor/bin/phpunit
