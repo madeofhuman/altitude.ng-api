@@ -4,23 +4,10 @@ jobs:
     docker:
       - image: circleci/php:7.4.0-apache
         environment:
-          APP_NAME: Altitude
-          APP_ENV: test
-          APP_KEY: base64:dGhqbnpja2hibjdzaGRieTNicjdnYmR2cw==
-          APP_DEBUG: false
-          APP_TIMEZONE: UTC
-          DB_CONNECTION: pgsql
-          DB_HOST: 127.0.0.1
-          DB_PORT: 5432
-          DB_DATABASE: altitude-test
-          DB_USERNAME: root
-          DB_PASSWORD: password
-          CACHE_DRIVER: file
-          QUEUE_DRIVER: database
       - image: circleci/postgres:12.1-postgis-ram
         environment:
-          POSTGRES_USER: root
-          POSTGRES_DB: altitude-test
+          POSTGRES_USER: postgres
+          POSTGRES_DB: altitude-api-test
           POSTGRES_PASSWORD: password
     working_directory: ~/repo
     steps:
